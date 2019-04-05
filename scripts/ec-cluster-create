@@ -199,7 +199,6 @@ debug_kinetic = 0/0
 debug_fuse = 0/0
 
 [client]
-rbd_default_features = 1
 
 [mon.$monname]
 host = $monname

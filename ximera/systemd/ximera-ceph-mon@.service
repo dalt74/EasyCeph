@@ -1,0 +1,18 @@
+[Unit]
+Description=Ximera Ceph cluster monitor daemon
+After=network-online.target
+Wants=ximera-ceph-mgr@%i.service ximera-ceph-mds@%i.service
+Before=ximera-ceph-mgr@%i.service ximera-ceph-mds@%i.service scstd.service smb.service nfs-server.service
+
+[Service]
+LimitNOFILE=1048576
+LimitNPROC=1048576
+ExecStart=/usr/bin/ceph-custom-daemon mon %i -d --setuser ceph --setgroup ceph
+ExecReload=/bin/kill -HUP $MAINPID
+Restart=on-failure
+StartLimitInterval=30min
+StartLimitBurst=5
+RestartSec=60s
+
+[Install]
+WantedBy=multi-user.target
