@@ -1,0 +1,57 @@
+#!/bin/bash
+
+function fatal() {
+    echo "$@" 1>&2
+    exit 1
+}
+
+function usage() {
+    echo "Usage: $0 [<clustername>-]<monname> [ --start ]" 1>&2
+}
+
+cluster=ceph
+if echo $1 | grep -q "^.\+-" ; then
+    cluster=$(echo $1 | cut -f 1 -d -)
+    daemonid=$(echo $1 | cut -f 2 -d -)
+elif [ -f /etc/sysconfig/ceph ] ; then
+    daemonid=$(echo $1)
+    . /etc/sysconfig/ceph
+    if [ "$CLUSTER" != "" ] ; then
+        cluster="$CLUSTER"
+    fi
+fi
+
+if [ "$daemonid" = "" ] ; then
+    usage
+    fatal "Aborted"
+fi
+
+daemondir="/var/lib/ceph/mgr/$cluster-$daemonid"
+
+if [ ! -d "$daemondir" ] ; then
+    mkdir -p "$daemondir" || fatal "MKDIR failed for $daemondir"
+fi
+
+if [ ! -f "$daemondir/keyring" ] ; then
+    ceph --cluster=$cluster auth get-or-create mgr.$daemonid \
+        mon 'allow profile mgr' \
+        osd 'allow *' \
+        mds 'allow *' > "$daemondir/keyring" || fatal "AUTH update failed"
+fi
+
+[ id ceph 1>&2 2>/dev/null ] && chown -R ceph:ceph "$daemondir"
+
+if [ "_$2" = "_--start" ] ; then
+    if [ -f /usr/lib/systemd/system/ximera-ceph-mgr@.service ] ; then
+        systemctl start ximera-ceph-mgr@$cluster-$daemonid
+    elif [ -f /usr/lib/systemd/system/ceph-mgr@.service ] ; then
+        if systemctl start ceph-mgr@$daemonid ; then
+            systemctl enable ceph-mgr@$daemonid
+        else
+            fatal "Can't start ceph-mgr@$daemonid"
+        fi
+    else
+        fatal "No systemd found"
+    fi
+fi
+

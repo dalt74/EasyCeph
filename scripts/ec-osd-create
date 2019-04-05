@@ -1,0 +1,103 @@
+#!/bin/bash
+
+function fatal() {
+	echo "Fatal: $@" 1>&2
+	exit 1
+}
+
+function usage() {
+	echo "Usage: $0 <type> <small_device> <big_device>" 1>&2
+	exit 1
+}
+
+function must_be_free() {
+	cat /proc/swaps /proc/mounts | grep -qw "$1" && fatal "device '$1' busy"
+}
+
+function must_be_block() {
+	[ ! -b "$1" ] && "$1" && fatal "device '$1' busy"
+}
+
+function zero_device() {
+	echo "Zeroing device '$1' ..."
+	if ! blkdiscard "$1" ; then
+		if ! dd if=/dev/zero of="$1" bs=1024k count=10 ; then
+			fatal "Can't zero device '$1'"
+		fi
+		echo "Device '$1' zeroed with write"
+	else
+		echo "Device '$1' zeroed with discard"
+	fi
+}
+
+[ "$cluster" = "" ] && cluster="ceph"
+
+if [ "$1" = "filestore" ] ; then
+	tgt="/dev/$3"
+	link="/dev/$2"
+	linkname="journal"
+	type="filestore"
+elif [ "$1" = "bluestore" ] ; then
+	tgt="/dev/$2"
+	link="/dev/$3"
+	linkname="block"
+	type="bluestore"
+else
+	usage
+fi
+
+tgtid="$(blkid "$tgt" | tr " " "\n" | grep PARTUUID | cut -f 2- -d= | tr -d "\"")"
+linkid="$(blkid "$link" | tr " " "\n" | grep PARTUUID | cut -f 2- -d= | tr -d "\"")"
+
+[ "$tgtid" = "" ] && fatal "Can't find target device id for '$tgt'"
+[ "$linkid" = "" ] && fatal "Can't find loinked device id for '$link'"
+
+realtgt="$(realpath /dev/disk/by-partuuid/$tgtid)"
+reallink="$(realpath /dev/disk/by-partuuid/$linkid)"
+
+for dev in "$reallink" "$realtgt" ; do
+	must_be_block "$dev"
+	must_be_free "$dev"
+	zero_device "$dev"
+done
+
+osdid="$(ceph --cluster=$cluster osd create)"
+[ "$?" != 0 ] && fatal "call to 'ceph --cluster=$cluster osd create' failed"
+
+osddir="/var/lib/ceph/osd/$cluster-$osdid"
+mkdir -p "$osddir" || fatal "Can't create '$osddir'"
+mkfs.xfs "$realtgt" || fatal "Failed mkfs.xfs for '$realtgt'"
+mount -t xfs "$realtgt" "$osddir" || fatal "Failed to mount '$realtgt' on '$osddir'"
+ln -s "/dev/disk/by-partuuid/$linkid" "$osddir/$linkname" || fatal "Failed symlink '$osddir/$linkname' => '$/dev/disk/by-partuuid/$linkid'"
+
+jopts=""
+if [ "$type" = "bluestore" ] ; then
+	echo "bluestore" > "$osddir/type"
+else
+	jopts="--mkjournal"
+fi
+
+chown -R ceph:ceph "$osddir" || fatal "Failed to chown '$osddir'"
+chown -R ceph:ceph "$osddir/$linknane" || fatal "Failed to chown '$osddir/$linkname'"
+
+if ! ceph-osd --cluster=$cluster --id $osdid --mkfs $jopt --setuser ceph --setgroup ceph ; then
+	fatal "ceph-osd --mkfs ... failed"
+fi
+
+if ! ceph --cluster=$cluster auth get-or-create osd.$osdid mon 'allow profile osd' osd 'allow *' > "$osddir/keyring" ; then
+	fatal "failed to create osd.$osdid keyring"
+fi
+
+chown ceph:ceph "$osddir/keyring"
+chmod 600 "$osddir/keyring"
+
+if [ "$4" != "--start" ] ; then
+    echo SUCCESS. You may start cluster=$cluster osd id=$osdid
+elif [ -f /usr/lib/systemd/system/ximera-ceph-osd@.service ] ; then
+    echo SUCCESS. Starting Ceph OSD cluster=$cluster osd id=$osdid
+    systemctl start ximera-ceph-osd@$cluster-$osdid
+else
+    echo SUCCESS. Starting Ceph OSD cluster=$cluster osd id=$osdid
+    systemctl start ceph-osd@$osdid
+fi
+exit 0

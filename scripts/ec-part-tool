@@ -1,0 +1,74 @@
+#!/bin/bash
+
+osd_type="4fbd7e29-9d25-41b8-afd0-062c0ceff05d"
+osd_name="CEPH OSD root volume"
+journal_type="45b0969e-9b03-4f30-b4c6-b4b80ceff106"
+journal_name="CEPH OSD journal partition"
+block_type="cafecafe-9b03-4f30-b4c6-b4b80ceff106"
+block_name="CEPH OSD blustore blocks volume"
+db_type="30cd0809-c2b2-499c-8879-2d6b78529876"
+db_name="CEPH OSD bluestore DB device"
+wal_type="5ce17fce-4087-4169-b7ff-056cc58473f9"
+wal_name="CEPH OSD bluestore WAL device"
+
+function fatal() {
+	echo "Fatal error: $@" 1>&2
+	exit 1
+}
+
+function must_be_number() {
+	sz=`echo -n "$@" | tr -d "0123456789"`
+	[ "$sz" != "" ] && fatal "'$@' is not a number"
+}
+
+function part_must_not_exist() {
+	[ -f "/sys/block/$1/$1$2/partition" ] && fatal "disk '$1' already has partition '$2'"
+}
+
+function part_must_exist() {
+	[ ! -f "/sys/block/$1/$1$2/partition" ] && fatal "disk '$1' already has partition '$2'"
+}
+
+function disk_must_exist() {
+	[ ! -f "/sys/block/$1/size" ] && fatal "disk '$1' doesn't exist (use short name like sda/vda etc)"
+}
+
+if [ "$1" = "mark" -a "$4" != "" ] ; then
+	disk_must_exist "$2"
+	must_be_number "$3"
+	part_must_exist "$2" "$3"
+	if [ "$4" = "osd" ] ; then
+		type="$osd_type"
+		name="$osd_name"
+	elif [ "$4" = "journal" ] ; then
+		type="$journal_type"
+		name="$journal_name"
+	elif [ "$4" = "block" ] ; then
+		type="$block_type"
+		name="$block_name"
+	elif [ "$4" = "wal" ] ; then
+		type="$wal_type"
+		name="$wal_name"
+	elif [ "$4" = "db" ] ; then
+		type="$db_type"
+		name="$db_name"
+	else
+		echo "Unsupport type, only osd|block|jorunal|db|wal is supported" 1>&2
+		exit 1
+	fi
+	$debug sgdisk "--typecode=$3:$type" "--change-name=$3:$name" --mbrtogpt "/dev/$2"
+elif [ "$1" = "create" -a "$3" != "" ] ; then
+	disk_must_exist "$2"
+	must_be_number "$3"
+	part_must_not_exist "$2" "$3"
+	if [ "$4" == "" ] ; then
+		$debug sgdisk "--largest-new=$3" --mdrtogpt "/dev/$2"
+	else
+		$debug sgdisk "--new=$3:0:$4" --mbrtogpt "/dev/$2"
+	fi
+else
+	echo "Usage:" 1>&2
+	echo "	$0 mark <disk> <partnum> osd|journal|block|db|wal" 1>&2
+	echo "	$0 create <disk> <partnum> [ <size> ]" 1>&2
+	exit 1
+fi
