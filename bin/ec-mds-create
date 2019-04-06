@@ -6,7 +6,7 @@ function fatal() {
 }
 
 function usage() {
-    echo "Usage: $0 [<clustername>-]<monname> [ --start ]" 1>&2
+    echo "Usage: $0 [<clustername>-]<mdsname> [ --start ]" 1>&2
 }
 
 cluster=ceph

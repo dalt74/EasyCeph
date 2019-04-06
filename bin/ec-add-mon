@@ -1,0 +1,150 @@
+#!/bin/bash
+
+function fatal() {
+	echo "$@" 1>&2
+	exit 1
+}
+
+function usage() {
+        echo "Not enough args, use $0 monip=<monip> monname=<monname> [ option=value ... ]" 1>&2
+        echo "  Mandatory parameters:" 1>&2
+        echo "          monip=<address>[:port] (first monitor IP address and optionally port)" 1>&2
+        echo "          monname=string (first monitor name, default is \"prima\")" 1>&2
+        echo "  Optional parameters:" 1>&2
+        echo "          cluster=string (cluster name, default is \"ceph\")" 1>&2
+}
+
+if [ "$1" = "" -o "$1" = "help" -o "$1" = "--help" -o "$1" = "-?" ] ; then
+	usage
+        fatal Exit
+fi
+
+cluster="ceph"
+if [ -f /etc/sysconfig/ceph ] ; then
+        . /etc/sysconfig/ceph
+        if [ "$CLUSTER" != "" ] ; then
+                cluster="$CLUSTER"
+        fi
+fi
+
+shift 4
+
+while [ "$1" != "" ] ; do
+    param=`echo "$1" | cut -f 1 -d "="`
+    value=`echo "$1" | cut -f 2- -d "="`
+    export "$param"="$value"
+    shift
+done
+
+if [ "$monip" = "" -o "$monname" = "" ] ; then
+	echo "-- Mandatory parameters not set --" 1>&2
+	echo "" 1>&2
+	usage
+	fatal Aborted
+fi
+
+if ! echo -n "$monname" | grep -q "^[a-z]\?[a-z0-9]\+\$" ; then
+    fatal "Wrong monitor name must be a lowercase idenitifier"
+fi
+
+monip="$(echo -n $monip)"
+if ! echo "$monip" | grep -q : ; then
+	monip="$(echo -n $monip):6789"
+fi
+echo "Checking IP address ..."
+checkip=$(echo $monip | cut -f 1 -d :)
+if ! ip addr 2>/dev/null | grep -q " $checkip/" ; then
+        echo "Local IP address \"$checkip\" not found" 1>&2
+        fatal Aborted
+fi
+
+echo "Checking cluster status ..."
+if ! ceph --cluster=$cluster mon dump 2>&1 1>/dev/null ; then
+    fatal "Ceph cluster '$cluster' not accessible"
+fi
+
+echo "Checking mon IP addresses ..."
+if ceph --cluster=$cluster mon dump | grep -q "$monip" ; then
+    fatal "Monitor address '$monip' already used"
+fi
+
+echo "Checking/creating mon directory ..."
+mondir="/var/lib/ceph/mon/$cluster-$monname"
+if [ -e "$mondir" ] ; then
+    fatal "Driectory $mondir exists"
+elif ! mkdir "$mondir" ; then
+    fatal "Unable to create mon dir $mondir"
+fi
+
+tmpkeyring="/tmp/.$monname.tmpkeyring"
+tmpmonmap="/tmp/.$monname.tmpmonmap"
+if ! ceph --cluster=$cluster auth get mon. > "$tmpkeyring" ; then
+    rm -rf "$mondir" "$tmpkeyring" "$tmpmonmap"
+    fatal "Unable to get mon keyring"
+elif ! ceph --cluster=$cluster mon getmap -o "$tmpmonmap" ; then
+    rm -rf "$mondir" "$tmpkeyring" "$tmpmonmap"
+    fatal "Unable to get mon keyring"
+elif ! ceph-mon --cluster=$cluster -i $monname --mkfs --monmap "/tmp/.$monname.tmpmonmap" --keyring "/tmp/.$monname.tmpkeyring" ; then
+    rm -rf "$mondir" "$tmpkeyring" "$tmpmonmap"
+    fatal "Mon mkfs failed"
+fi
+
+ceph-mon -f --cluster=$cluster --id=$monname --public-addr $monip &
+monpid=$!
+
+sleep 1
+if [ ! -d "/proc/$monpid" ] ; then
+    # New mon died. Ooops!
+    rm -rf "$mondir" "$tmpkeyring" "$tmpmonmap"
+    fatal "Mon setup failed, aborting"
+fi
+
+echo "Waiting for new mon $monname=$monip ..."
+found=no
+for n in $(seq 12) ; do
+    if ceph --connect-timeout=10 --cluster=$cluster mon dump | grep -q " $monip/" ; then
+        echo " FOUND"
+        found=yes
+        break
+    else
+        echo " not found, retrying in 10 seconds..."
+        sleep 5
+    fi
+done
+
+if [ "$found" != "yes" ] ; then
+    kill -TERM $monpid
+    rm -rf "$mondir" "$tmpkeyring" "$tmpmonmap"
+    fatal "Can't find new mon $monname = $monip"
+else
+    rm -rf "$tmpkeyring" "$tmpmonmap"
+    echo "New mon monname=$monip found, restarting mon process"
+    kill -TERM $monpid
+    echo "Waiting for $monname shutdown ..."
+    while [ -d "/proc/$monpid" ] ; do
+        sleep 1
+    done
+    echo "Mon $monname shutdown complete"
+fi
+
+chown -R ceph:ceph "$mondir"
+
+if [ -f "/usr/lib/systemd/system/ximera-ceph-mon@.service" ] ; then
+	if systemctl start ximera-ceph-mon@$cluster-$monname.service ] ; then
+	    systemctl enable ximera-ceph-mon@$cluster-$monname.service
+	    echo -e "\nQuerying cluster status for cluster \"$cluster\"\n" 1>&2
+	    ceph -s --cluster="$cluster"
+	else
+	    echo -e "\nMonitor startup failed for $cluster-$monname (ximera-ceph-mon)" 1>&2
+	    fatal Aborting
+	fi
+elif [ -f "/usr/lib/systemd/system/ceph-mon@.service" ] ; then
+	if systemctl start ceph-mon@$monname.service ; then
+	    systemctl enable ceph-mon@$monname.service
+	    echo -e "\nQuerying cluster status for default cluster\n" 1>&2
+	    exec ceph -s
+	else
+	    echo -e "\nMonitor startup failed for $monname (ceph-mon)" 1>&2
+	    fatal Aborting
+	fi
+fi

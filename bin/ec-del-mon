@@ -1,0 +1,55 @@
+#!/bin/bash
+
+function fatal() {
+	echo "$@" 1>&2
+	exit 1
+}
+
+function usage() {
+        echo "Not enough args, use $0 monname=<monname> [ option=value ... ]" 1>&2
+        echo "  Mandatory parameters:" 1>&2
+        echo "          monname=string (first monitor name, default is \"prima\")" 1>&2
+        echo "  Optional parameters:" 1>&2
+        echo "          cluster=string (cluster name, default is \"ceph\")" 1>&2
+}
+
+if [ "$1" = "" -o "$1" = "help" -o "$1" = "--help" -o "$1" = "-?" ] ; then
+	usage
+    fatal Exit
+fi
+
+cluster="ceph"
+if [ -f /etc/sysconfig/ceph ] ; then
+        . /etc/sysconfig/ceph
+        if [ "$CLUSTER" != "" ] ; then
+                cluster="$CLUSTER"
+        fi
+fi
+
+while [ "$1" != "" ] ; do
+    param=`echo "$1" | cut -f 1 -d "="`
+    value=`echo "$1" | cut -f 2- -d "="`
+    export "$param"="$value"
+    shift
+done
+
+if [ "$monname" = "" ] ; then
+	echo "-- Mandatory parameters not set --" 1>&2
+	echo "" 1>&2
+	usage
+	fatal Aborted
+fi
+
+if ! echo -n "$monname" | grep -q "^[a-z]\?[a-z0-9]\+\$" ; then
+    fatal "Wrong monitor name must be a lowercase idenitifier"
+fi
+
+mondir="/var/lib/ceph/mon/$cluster-$monname"
+ceph --cluster=$cluster mon rm "$monname"
+if [ -f "/usr/lib/systemd/system/ximera-ceph-mon@.service" ] ; then
+	systemctl stop ximera-ceph-mon@$cluster-$monname.service then
+	systemctl disable ximera-ceph-mon@$cluster-$monname.service
+fi
+systemctl stop ximera-ceph-mon@$cluster-$monname.service ] ; then
+systemctl disable ximera-ceph-mon@$cluster-$monname.service
+rm -rf "$mondir"

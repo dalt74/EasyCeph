@@ -6,19 +6,17 @@ function fatal() {
 }
 
 function usage() {
-        echo "No clustername specified, use $0 monip=<monip> [ option=value ... ]" 1>&2
+        echo "Not enough args, use $0 monip=<monip> [ option=value ... ]" 1>&2
         echo "  Mandatory parameters:" 1>&2
         echo "          monip=<address>[:port] (first monitor IP address and optionally port)" 1>&2
         echo "          clusternet=<addr/mask> (cluster client network)" 1>&2
         echo "  Optional parameters:" 1>&2
-        echo "          cluster=string (cluster name, default is \"ceph\")" 1>&2
         echo "          monname=string (first monitor name, default is \"prima\")" 1>&2
-        echo "          monip=string (first monitor IP address)" 1>&2
-        echo "          clusternet=<addr/mask> (cluster client network)" 1>&2
+        echo "          cluster=string (cluster name, default is \"ceph\")" 1>&2
         echo "          chooseleaf=int (0 - device, 1 - host, default is 1)" 1>&2
         echo "          minsize=int (minimum replica count to be writable, default is 1)" 1>&2
         echo "          defsize=int (default replica count, default is 3)" 1>&2
-        echo "          osdnet=addr/mask (default replica count, default is none)" 1>&2
+        echo "          osdnet=addr/mask (private network, default matching \$clusternet)" 1>&2
 }
 
 if [ "$1" = "" -o "$1" = "help" -o "$1" = "--help" -o "$1" = "-?" ] ; then
@@ -34,8 +32,6 @@ if [ -f /etc/sysconfig/ceph ] ; then
                 cluster="$CLUSTER"
         fi
 fi
-
-shift 4
 
 chooseleaf=1
 minsize=1
