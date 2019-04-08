@@ -21,8 +21,8 @@ elif [ -f /etc/sysconfig/ceph ] ; then
     fi
 fi
 
-if [ "$daemonid" = "" ] ; then
-    usage
+if ! echo "$daemonid" | grep -q "^[a-z]\?[a-z0-9]\+$" ; then
+    echo "Wrong daemon id: '$daemonid'"
     fatal "Aborted"
 fi
 

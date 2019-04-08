@@ -3,14 +3,14 @@ EasyCeph - deploy ceph easy and fast
 Create cluster with first monitor and one MGR daemon
 
 host-one # ec-cluster-create monip=192.168.1.1:6789 clusternet=192.168.1.0/24 osdnet=192.168.2.0/24
-host-one # ec-add-mgr prima --start
+host-one # ec-mgr-create prima --start
 
 Deploy monitor on other host (copy configs and deploy second mon and mgr)
 
 host-one # scp /etc/ceph/ceph.conf /etc/ceph/ceph.client.admin.keyring root@host-two
 host-one # ssh root@host-two
-host-two # ec-add-mon monip=192.168.1.2:6789 monname=secunda
-host-two# ec-add-mgr secunda --start
+host-two # ec-mon-add monip=192.168.1.2:6789 monname=secunda
+host-two # ec-mgr-create secunda --start
 
 Create custom OSD (two OSDs on one disk)
 

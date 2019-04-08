@@ -129,7 +129,7 @@ osd_crush_update_on_start = false
 osd_enable_op_tracker = true
 osd_heartbeat_grace = 60
 osd_heartbeat_interval = 1
-osd_max_backfills = 1
+osd_max_backfills = 4
 osd_mon_heartbeat_interval = 15
 osd_mon_report_interval_min = 5
 osd_mon_report_interval_max = 15
@@ -150,8 +150,6 @@ osd_scrub_chunk_min = 1
 osd_scrub_chunk_max = 2
 
 perf = true
-
-rbd_cache = false
 
 throttler_perf_counter = true
 
@@ -192,15 +190,8 @@ debug_kstore = 0/0
 debug_rocksdb = 0/0
 debug_leveldb = 0/0
 debug_kinetic = 0/0
-debug_fuse = 0/0
+debug_fuse = 0/0" > "/etc/ceph/$cluster.conf"
 
-[client]
-
-[mon.$monname]
-host = $monname
-mon_addr = $monip
-
-" > "/etc/ceph/$cluster.conf"
 fi
 
 monaddr=`echo $monip | cut -f 1 -d :`
