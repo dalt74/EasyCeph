@@ -2,23 +2,27 @@ EasyCeph - deploy ceph easy and fast
 
 Create cluster with first monitor and one MGR daemon
 
-# ec-cluster-create monip=192.168.1.1:6789 clusternet=192.168.1.0/24 osdnet=192.168.2.0/24
-# ec-add-mgr prima --start
+host-one # ec-cluster-create monip=192.168.1.1:6789 clusternet=192.168.1.0/24 osdnet=192.168.2.0/24
+host-one # ec-add-mgr prima --start
 
 Deploy monitor on other host (copy configs and deploy second mon and mgr)
 
-# scp /etc/ceph/ceph.conf /etc/ceph/ceph.client.admin.keyring root@otherhost
-# ssh root@otherhost
-# ec-add-mon monip=192.168.1.2:6789 monname=secunda
-# ec-add-mgr secunda --start
+host-one # scp /etc/ceph/ceph.conf /etc/ceph/ceph.client.admin.keyring root@host-two
+host-one # ssh root@host-two
+host-two # ec-add-mon monip=192.168.1.2:6789 monname=secunda
+host-two# ec-add-mgr secunda --start
 
 Create custom OSD (two OSDs on one disk)
-# gdisk /dev/sdb 
-// use gdisk to create 4 partitions - two for OSD root and two for data
-# ec-part-tool mark sdb 1 osd
-# ec-part-tool mark sdb 2 block
-# ec-part-tool mark sdb 3 osd
-# ec-part-tool mark sdb 4 block
-# chown ceph:ceph /dev/sdb?
-# ec-osd-create bluestore sdb1 sdb2 --start
-# ec-osd-create bluestore sdb3 sdb4 --start
+
+host-two # ec-part-tool create sdb 1 100M  // creates sdb1 of 100MiB
+host-two # ec-part-tool create sdb 2 123G  // creates sdb2 of 123GiB
+host-two # ec-part-tool create sdb 3 100M  // creates sdb3 of 100MiB
+host-two # ec-part-tool create sdb 4       // creates sdb4 of all remaining size
+
+host-two # ec-part-tool mark sdb 1 osd
+host-two # ec-part-tool mark sdb 2 block
+host-two # ec-part-tool mark sdb 3 osd
+host-two # ec-part-tool mark sdb 4 block
+host-two # chown ceph:ceph /dev/sdb?
+host-two # ec-osd-create bluestore sdb1 sdb2 --start
+host-two # ec-osd-create bluestore sdb3 sdb4 --start
