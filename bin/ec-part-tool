@@ -62,7 +62,7 @@ elif [ "$1" = "create" -a "$3" != "" ] ; then
 	must_be_number "$3"
 	part_must_not_exist "$2" "$3"
 	if [ "$4" == "" ] ; then
-		$debug sgdisk "--largest-new=$3" --mdrtogpt "/dev/$2"
+		$debug sgdisk "--largest-new=$3" --mbrtogpt "/dev/$2"
 	else
 		$debug sgdisk "--new=$3:0:$4" --mbrtogpt "/dev/$2"
 	fi
