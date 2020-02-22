@@ -49,17 +49,29 @@ fi
 tgtid="$(blkid "$tgt" | tr " " "\n" | grep PARTUUID | cut -f 2- -d= | tr -d "\"")"
 linkid="$(blkid "$link" | tr " " "\n" | grep PARTUUID | cut -f 2- -d= | tr -d "\"")"
 
-[ "$tgtid" = "" ] && fatal "Can't find target device id for '$tgt'"
-[ "$linkid" = "" ] && fatal "Can't find loinked device id for '$link'"
+if ! echo "$tgt" | grep -q "^/dev/mapper/" ; then
+    [ "$tgtid" = "" ] && fatal "Can't find target device id for '$tgt'"
+    realtgt="$(realpath /dev/disk/by-partuuid/$tgtid)"
+    must_be_block "$realtgt"
+    must_be_free "$realtgt"
+    zero_device "$realtgt"
+else
+    realtgt="$tgt"
+fi
 
-realtgt="$(realpath /dev/disk/by-partuuid/$tgtid)"
-reallink="$(realpath /dev/disk/by-partuuid/$linkid)"
+if ! echo "$link" | grep -q "^/dev/mapper/" ; then
+    [ "$linkid" = "" ] && fatal "Can't find linked device id for '$link'"
+    reallink="$(realpath /dev/disk/by-partuuid/$linkid)"
+    must_be_block "$reallink"
+    must_be_free "$reallink"
+    zero_device "$reallink"
+    link_path="/dev/disk/by-partuuid/$linkid"
+else
+    reallink="$link"
+    link_path="$reallink"
+fi
 
-for dev in "$reallink" "$realtgt" ; do
-	must_be_block "$dev"
-	must_be_free "$dev"
-	zero_device "$dev"
-done
+echo "FMT $realtgt LINK $linkname => $reallink"
 
 osdid="$(ceph --cluster=$cluster osd create)"
 [ "$?" != 0 ] && fatal "call to 'ceph --cluster=$cluster osd create' failed"
@@ -68,7 +80,7 @@ osddir="/var/lib/ceph/osd/$cluster-$osdid"
 mkdir -p "$osddir" || fatal "Can't create '$osddir'"
 mkfs.xfs "$realtgt" || fatal "Failed mkfs.xfs for '$realtgt'"
 mount -t xfs "$realtgt" "$osddir" || fatal "Failed to mount '$realtgt' on '$osddir'"
-ln -s "/dev/disk/by-partuuid/$linkid" "$osddir/$linkname" || fatal "Failed symlink '$osddir/$linkname' => '$/dev/disk/by-partuuid/$linkid'"
+ln -s "$link_path" "$osddir/$linkname" || fatal "Failed symlink '$osddir/$linkname' => '${linkpath}'"
 
 jopts=""
 if [ "$type" = "bluestore" ] ; then
@@ -77,8 +89,11 @@ else
 	jopts="--mkjournal"
 fi
 
+chown ceph:ceph "$reallink" "$realtgt"
 chown -R ceph:ceph "$osddir" || fatal "Failed to chown '$osddir'"
 chown -R ceph:ceph "$osddir/$linknane" || fatal "Failed to chown '$osddir/$linkname'"
+
+ls -lL $osddir
 
 if ! ceph-osd --cluster=$cluster --id $osdid --mkfs $jopt --setuser ceph --setgroup ceph ; then
 	fatal "ceph-osd --mkfs ... failed"

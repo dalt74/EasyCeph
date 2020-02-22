@@ -1,0 +1,106 @@
+#!/bin/bash
+if [ "$1" == "" ] ; then
+	echo "Usage: $0 create <vg> <volume>" 1>&2
+	echo "       $0 open <vg> <volume>" 1>&2
+	echo "       $0 init <device>" 1>&2
+	echo "       $0 openvg <vg>" 1>&2
+	exit 1
+fi
+
+vg="$2"
+lv="$3"
+
+function check_device() {
+	echo "Checking $1/$2"
+	if [ ! -b /dev/$1/$2 ] ; then
+		echo "Can't find block device /dev/$1/$2"
+		exit 1
+	fi
+}
+
+function abort() {
+	echo "Aborting: $@" 1>&2
+	exit 1
+}
+
+if [ "$1" = "init" ] ; then
+	vg="d$(date +%y%m%d_%H%M%S)"
+	if ! vgcreate ${vg} "$2" ; then
+		abort "Failed create volume group $vg on $1"
+	fi
+	if ! lvcreate -L 1G -n meta ${vg} ; then
+		abort "Failed create LV meta of 1G in $vg"
+	fi
+	if ! lvcreate -l 100%FREE -n data ${vg} ; then
+		abort "Failed create LV data in $vg"
+	fi
+	read -p"Format device? Y/N: " fmt
+	if [ "${fmt}" != "y" -a "${fmt}" != "Y" ] ; then
+		echo "Skip format, task finished"
+		exit 0
+	fi
+	if [ "${key}" = "" ] ; then
+		read -p"Enter password: " key
+		read -p"Retype password: " key1
+		if [ "$key" != "$key1" ] ; then
+			abort "Password mismatch, aborting"
+		fi
+	fi
+	export key
+	if ! $0 create ${vg} meta ; then
+		abort "Failed format \"meta\" volume, aborting"
+	elif ! $0 create ${vg} data ; then
+		abort "Failed format \"data\" volume, aborting"
+	fi
+	$0 open ${vg} meta
+	$0 open ${vg} data
+elif [ "$1" = "create" ] ; then
+	if [ "${key}" = "" ] ; then
+		read -p"Enter password: " key
+		read -p"Retype password: " key1
+	fi
+	check_device $vg $lv
+	echo -n "$key" | cryptsetup luksFormat --key-file=- "/dev/${vg}/${lv}"
+elif [ "$1" = "open" ] ; then
+	if [ "${key}" = "" ] ; then
+		read -p"Enter password: " key
+	fi
+	check_device $vg $lv
+	echo -n "$key" | cryptsetup luksOpen --key-file=- "/dev/${vg}/${lv}" "${vg}-${lv}-plain"
+elif [ "$1" = "openvg" ] ; then
+	if [ -e "/dev/mapper/${vg}-data-plain" -o -e "/dev/mapper/${vg}-meta-plain" ] ; then
+		abort "Volume group ${vg} looks already activated"
+	fi
+	if [ "${key}" = "" ] ; then
+		read -p"Enter password: " key
+		export key
+	fi
+	check_device $vg meta
+	check_device $vg data
+	for vol in meta data ; do
+		if [ ! -b /dev/mapper/"${vg}-${vol}-plain" ] ; then
+			if ! $0 open "${vg}" "${vol}" ; then
+				abort "Failed to open encrypted ${vg}/"${vol}" volume"
+			fi
+		fi
+	done
+	tdir="/tmp/osd-probe-$$"
+	mkdir -p "${tdir}"
+	if ! mount -t xfs "/dev/mapper/${vg}-meta-plain" "$tdir" ; then
+		abort "Unable to mount /dev/mapper/${vg}-meta-plain"
+	fi
+	osdid=$(cat "${tdir}/whoami" 2>/dev/null)
+	umount $tdir
+	if [ "$osdid" != "" ] ; then
+		odir="/var/lib/ceph/osd/ceph-$osdid"
+		mkdir -p "$odir"
+		mount -t xfs "/dev/mapper/${vg}-meta-plain" "$odir"
+		chown ceph:ceph "/dev/mapper/${vg}-meta-plain" "/dev/mapper/${vg}-data-plain"
+		systemctl start ceph-osd@$osdid
+	else
+		echo "OSD info unrecognized" 1>&2
+	fi
+	rmdir $tdir
+else
+	abort "Unsupported command: $1"
+fi
