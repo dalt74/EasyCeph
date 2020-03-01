@@ -1,9 +1,9 @@
 #!/bin/bash
 if [ "$1" == "" ] ; then
-	echo "Usage: $0 create <vg> <volume>" 1>&2
-	echo "       $0 open <vg> <volume>" 1>&2
-	echo "       $0 init <device>" 1>&2
-	echo "       $0 openvg <vg>" 1>&2
+	echo "Usage: $0 create <vg> <volume>  -- formats specific LV into LUKS device" 1>&2
+	echo "       $0 open <vg> <volume>    -- opens (decripts) specific LV" 1>&2
+	echo "       $0 init <device>  -- creates PV, VG and LVs and formats them with LUKS" 1>&2
+	echo "       $0 openvg <vg>    -- opens (decrypts) meta+data device of the VG and start OSD" 1>&2
 	exit 1
 fi
 
