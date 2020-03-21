@@ -1,11 +1,11 @@
-%define version 1.0.0
+%define version 1.0.2
 
 %global debug_package %{nil}
 
 BuildArch:	noarch
 
 Name:		easyceph
-Version:	1.0.1
+Version:	%{version}
 Release:	1
 Summary:	EasyCeph - ceph management tools bundle
 License:	GPLv2
