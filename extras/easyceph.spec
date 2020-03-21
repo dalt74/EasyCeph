@@ -5,7 +5,7 @@
 BuildArch:	noarch
 
 Name:		easyceph
-Version:	1.0.0
+Version:	1.0.1
 Release:	1
 Summary:	EasyCeph - ceph management tools bundle
 License:	GPLv2
