@@ -239,8 +239,8 @@ else
 fi
 
 rm -f "$monmap" "$monkring"
-if [ -f "/usr/lib/systemd/system/ximera-ceph-mon@.service" ] ; then
-	if systemctl start ximera-ceph-mon@$cluster-$monname.service ] ; then
+if [ -f "/usr/lib/systemd/system/ximera-ceph-mon@.service" -a "${use_ximera}" = "yes" ] ; then
+	if systemctl start ximera-ceph-mon@$cluster-$monname.service ; then
 	    systemctl enable ximera-ceph-mon@$cluster-$monname.service
 	    echo -e "\nQuerying cluster status for cluster \"$cluster\"\n" 1>&2
 	    ceph -s --cluster="$cluster"

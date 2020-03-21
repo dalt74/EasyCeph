@@ -42,7 +42,7 @@ fi
 [ id ceph 1>&2 2>/dev/null ] && chown -R ceph:ceph "$daemondir"
 
 if [ "_$2" = "_--start" ] ; then
-    if [ -f /usr/lib/systemd/system/ximera-ceph-mgr@.service ] ; then
+    if [ -f /usr/lib/systemd/system/ximera-ceph-mgr@.service  -a "${use_ximera}" = "yes" ] ; then
         systemctl start ximera-ceph-mgr@$cluster-$daemonid
     elif [ -f /usr/lib/systemd/system/ceph-mgr@.service ] ; then
         if systemctl start ceph-mgr@$daemonid ; then

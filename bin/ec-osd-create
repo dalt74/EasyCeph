@@ -108,7 +108,7 @@ chmod 600 "$osddir/keyring"
 
 if [ "$4" != "--start" ] ; then
     echo SUCCESS. You may start cluster=$cluster osd id=$osdid
-elif [ -f /usr/lib/systemd/system/ximera-ceph-osd@.service ] ; then
+elif [ -f /usr/lib/systemd/system/ximera-ceph-osd@.service -a "${use_ximera}" = "yes" ] ; then
     echo SUCCESS. Starting Ceph OSD cluster=$cluster osd id=$osdid
     systemctl start ximera-ceph-osd@$cluster-$osdid
 else
