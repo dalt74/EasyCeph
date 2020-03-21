@@ -11,7 +11,6 @@ vg="$2"
 lv="$3"
 
 function check_device() {
-	echo "Checking $1/$2"
 	if [ ! -b /dev/$1/$2 ] ; then
 		echo "Can't find block device /dev/$1/$2"
 		exit 1
@@ -67,6 +66,9 @@ elif [ "$1" = "open" ] ; then
 	fi
 	check_device $vg $lv
 	echo -n "$key" | cryptsetup luksOpen --key-file=- "/dev/${vg}/${lv}" "${vg}-${lv}-plain"
+	if echo -n "$key" | cryptsetup luksOpen --key-file=- "/dev/${vg}/${lv}" "${vg}-${lv}-plain"  ; then
+		echo GOT ARTIFACT: /dev/mapper/${vg}-${lv}-plain
+	fi
 elif [ "$1" = "openvg" ] ; then
 	if [ -e "/dev/mapper/${vg}-data-plain" -o -e "/dev/mapper/${vg}-meta-plain" ] ; then
 		abort "Volume group ${vg} looks already activated"

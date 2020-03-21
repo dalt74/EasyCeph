@@ -26,3 +26,4 @@ host-two # ec-part-tool mark sdb 4 block
 host-two # chown ceph:ceph /dev/sdb?
 host-two # ec-osd-create bluestore sdb1 sdb2 --start
 host-two # ec-osd-create bluestore sdb3 sdb4 --start
+
