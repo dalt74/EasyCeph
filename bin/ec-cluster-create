@@ -204,7 +204,7 @@ echo "Creating mon keyring" 1>&2
 ceph-authtool --create-keyring "$monkring" --gen-key -n mon. --cap mon 'allow *' || exit 1
 echo "Creating adm keyring" 1>&2
 ceph-authtool --create-keyring "$admkring" --gen-key \
-        -n client.admin --set-uid=0 \
+        -n client.admin \
         --cap mon 'allow *' \
         --cap osd 'allow *' \
         --cap mds 'allow *' \
