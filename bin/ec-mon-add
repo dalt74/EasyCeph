@@ -102,7 +102,7 @@ fi
 echo "Waiting for new mon $monname=$monip ..."
 found=no
 for n in $(seq 12) ; do
-    if ceph --connect-timeout=10 --cluster=$cluster mon dump | grep -qw " $monip" ; then
+    if ceph --connect-timeout=10 --cluster=$cluster mon dump | grep -qw "$monip" ; then
         echo " FOUND"
         found=yes
         break
