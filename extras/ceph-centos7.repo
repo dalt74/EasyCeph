@@ -1,0 +1,20 @@
+[ceph-v12]
+name=Ceph v12 (luminous)
+baseurl=http://download.ceph.com/rpm-luminous/el7/x86_64/
+failovermethod=priority
+enabled=0
+gpgcheck=0
+
+[ceph-v14]
+name=Ceph v12 (mautilus)
+baseurl=http://download.ceph.com/rpm-nautilus/el7/x86_64/
+failovermethod=priority
+enabled=0
+gpgcheck=0
+
+[ceph-v15]
+name=Ceph v15 (octopus)
+baseurl=http://download.ceph.com/rpm-octopous/el7/x86_64/
+failovermethod=priority
+enabled=0
+gpgcheck=0
