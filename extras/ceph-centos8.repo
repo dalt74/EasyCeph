@@ -1,0 +1,13 @@
+[ceph-v14]
+name=Ceph v12 (mautilus)
+baseurl=http://download.ceph.com/rpm-nautilus/el8/x86_64/
+failovermethod=priority
+enabled=0
+gpgcheck=0
+
+[ceph-v15]
+name=Ceph v15 (octopus)
+baseurl=http://download.ceph.com/rpm-octopous/el8/x86_64/
+failovermethod=priority
+enabled=0
+gpgcheck=0
