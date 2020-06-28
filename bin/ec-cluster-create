@@ -78,30 +78,7 @@ osd_crush_chooseleaf_type = $chooseleaf
 osd_pool_default_size = $defsize
 osd_pool_default_min_size = $minsize
 
-#
-# Performance defaults
-#
-auth_cluster_required = cephx
-auth_service_required = cephx
-auth_client_required = cephx
-
-filestore_fd_cache_size = 2048
-filestore_fd_cache_shards = 16
-filestore_min_sync_interval = 0.1
-filestore_max_sync_interval = 10
-filestore_max_inline_xattr_size = 1024
-filestore_op_threads = 8
-filestore_queue_max_ops = 4096
-filestore_queue_max_bytes = 1024768000
-filestore_wbthrottle_enable = false
-
-journal_queue_max_ops = 8192
-journal_max_write_bytes = 104857600
-journal_max_write_entries = 4096
-
 mon_allow_pool_delete = true
-mon_max_pool_pg_num = 166496
-mon_max_pg_per_osd = 16384
 mon_osd_adjust_heartbeat_grace = false
 mon_osd_adjust_down_out_interval = false
 mon_osd_allow_primary_affinity = true
@@ -112,40 +89,17 @@ mon_osd_min_in_ratio = 0.001
 mon_osd_min_down_reporters = 2
 mon_osd_min_down_reports = 3
 mon_osd_report_timeout = 90
-mon_pg_warn_max_per_osd = 10000
 mon_health_preluminous_compat_warning = false
-ms_dispatch_throttle_bytes = 1048576000
-ms_dispatch_max_bytes = 1048576000
-ms_nocrc = true
 mutex_perf_counter = true
 
-objecter_inflight_op_bytes = 1048576000
-objecter_inflight_ops = 102400
-
 osd_beacon_report_interval = 5
-osd_client_message_size_cap = 0
-osd_client_message_cap = 0
 osd_crush_update_on_start = false
 osd_enable_op_tracker = true
 osd_heartbeat_grace = 60
 osd_heartbeat_interval = 1
-osd_max_backfills = 4
 osd_mon_heartbeat_interval = 15
 osd_mon_report_interval_min = 5
 osd_mon_report_interval_max = 15
-osd_map_message_max = 10
-osd_map_cache_size = 20
-osd_map_max_advance = 10
-osd_map_share_max_epochs = 10
-osd_op_num_shards = 10
-osd_op_threads = 16
-osd_op_queue = wpq
-osd_op_queue_cut_off = high
-osd_pg_epoch_persisted_max_stale = 10
-osd_recovery_delay_start = 0
-osd_recovery_max_active = 32
-osd_recovery_threads = 1
-osd_recovery_op_priority = 63
 osd_scrub_chunk_min = 1
 osd_scrub_chunk_max = 2
 
@@ -190,7 +144,11 @@ debug_kstore = 0/0
 debug_rocksdb = 0/0
 debug_leveldb = 0/0
 debug_kinetic = 0/0
-debug_fuse = 0/0" > "/etc/ceph/$cluster.conf"
+debug_fuse = 0/0
+
+[client]
+admin_socket = /var/run/ceph/$cluster-$type.$id.$pid.$cctid.asok
+" > "/etc/ceph/$cluster.conf"
 
 fi
 
