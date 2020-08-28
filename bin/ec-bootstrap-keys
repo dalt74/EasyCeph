@@ -1,0 +1,9 @@
+#!/bin/bash
+if [ "$1" = "" ] ; then
+    echo "Usage: $0 <cluster_name>" 1>&2
+    exit 1
+fi
+
+for role in bootstrap-osd bootstrap-mds bootstrap-osd bootstrap-rbd bootstrap-rbd-mirror bootstrap-rgw; do
+    ceph --cluster "$1" auth get client.$role | grep -v "caps " >"/var/lib/ceph/$role/$1.keyring"
+done
