@@ -10,9 +10,18 @@ function usage() {
 }
 
 cluster=ceph
-if echo $1 | grep -q "^.\+-" ; then
+if [ "$1" = "" ] ; then
+    usage
+    exit 1
+elif echo $1 | grep -q "^.\+-" ; then
     cluster=$(echo $1 | cut -f 1 -d -)
     daemonid=$(echo $1 | cut -f 2 -d -)
+    if [ ! -f /usr/lib/systemd/system/ximera-ceph-mgr@.service ] ; then
+        echo "Custom cluster name requires Ximera units installed"
+        exit 1
+    else
+        use_ximera="yes"
+    fi
 elif [ -f /etc/sysconfig/ceph ] ; then
     daemonid=$(echo $1)
     . /etc/sysconfig/ceph
@@ -42,7 +51,7 @@ fi
 [ id ceph 1>&2 2>/dev/null ] && chown -R ceph:ceph "$daemondir"
 
 if [ "_$2" = "_--start" ] ; then
-    if [ -f /usr/lib/systemd/system/ximera-ceph-mgr@.service  -a "${use_ximera}" = "yes" ] ; then
+    if [ -f /usr/lib/systemd/system/ximera-ceph-mgr@.service -a "${use_ximera}" = "yes" ] ; then
         systemctl start ximera-ceph-mgr@$cluster-$daemonid
     elif [ -f /usr/lib/systemd/system/ceph-mgr@.service ] ; then
         if systemctl start ceph-mgr@$daemonid ; then

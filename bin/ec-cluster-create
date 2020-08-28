@@ -25,11 +25,13 @@ if [ "$1" = "" -o "$1" = "help" -o "$1" = "--help" -o "$1" = "-?" ] ; then
 fi
 
 cluster="ceph"
+system_wide_cluster="ceph"
 monname="prima"
 if [ -f /etc/sysconfig/ceph ] ; then
         . /etc/sysconfig/ceph
         if [ "$CLUSTER" != "" ] ; then
                 cluster="$CLUSTER"
+                system_wide_cluster="$CLUSTER"
         fi
 fi
 
@@ -43,6 +45,10 @@ while [ "$1" != "" ] ; do
     export "$param"="$value"
     shift
 done
+
+if [ "$cluster" != "$system_wide_cluster" -a ! -f /usr/lib/systemd/system/ximera-ceph-mon@.service ] ; then
+        fatal "Non-default cluster name requires Ximera units installed. Aborted"
+fi
 
 if [ "$monip" = "" -o "$clusternet" = "" ] ; then
 	echo "-- Mandatory parameters not set --" 1>&2
