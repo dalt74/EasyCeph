@@ -1,0 +1,18 @@
+#!/bin/bash
+if [ "$1" = "" ] ; then
+    echo "Usage: $0 <cluster_uuid>" 1>&2
+    exit 1
+fi
+
+for f in $(\
+    grep -H "^[[:space:]]*fsid[[:space:]]*=[[:space:]]*$1[[:space:]]*$" /etc/ceph/*.conf | \
+    cut -f 1 -d ":" | sort | uniq | head -n 1 | cut -f 4 -d "/" | cut -f 1 -d . \
+) ; do
+    if [ "$f" != "" ] ; then
+        echo "$f"
+        exit 0
+    fi
+done
+
+echo "Cluster UUID=$1 not found" 1>&2
+exit 1
