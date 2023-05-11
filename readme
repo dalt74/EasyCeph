@@ -4,6 +4,7 @@ Create cluster with first monitor and one MGR daemon
 
 host-one # ec-cluster-create monip=192.168.1.1:6789 clusternet=192.168.1.0/24 osdnet=192.168.2.0/24
 host-one # ec-mgr-create prima --start
+host-one # ec-bootstrap-keys ceph
 
 Deploy monitor on other host (copy configs and deploy second mon and mgr)
 
