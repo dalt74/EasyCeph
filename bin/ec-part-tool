@@ -22,11 +22,11 @@ function must_be_number() {
 }
 
 function part_must_not_exist() {
-	[ -f "/sys/block/$1/$1$2/partition" ] && fatal "disk '$1' already has partition '$2'"
+	[ -f "/sys/block/$1/$1$2/partition" -o -f "/sys/block/$1/$1"p"$2/partition" ] && fatal "disk '$1' already has partition '$2'"
 }
 
 function part_must_exist() {
-	[ ! -f "/sys/block/$1/$1$2/partition" ] && fatal "disk '$1' already has partition '$2'"
+	[ ! -f "/sys/block/$1/$1$2/partition" -a ! -f "/sys/block/$1/$1"p"$2/partition" ] && fatal "disk '$1' has no partition '$2'"
 }
 
 function disk_must_exist() {
@@ -72,3 +72,4 @@ else
 	echo "	$0 create <disk> <partnum> [ <size> ]" 1>&2
 	exit 1
 fi
+
