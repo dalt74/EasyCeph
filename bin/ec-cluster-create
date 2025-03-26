@@ -96,6 +96,7 @@ mon_osd_min_down_reporters = 2
 mon_osd_min_down_reports = 3
 mon_osd_report_timeout = 90
 mon_health_preluminous_compat_warning = false
+auth_allow_insecure_global_id_reclaim = false
 mutex_perf_counter = true
 
 osd_beacon_report_interval = 5
@@ -153,7 +154,7 @@ debug_kinetic = 0/0
 debug_fuse = 0/0
 
 [client]
-admin_socket = /var/run/ceph/$cluster-$type.$id.$pid.$cctid.asok
+admin_socket = /var/run/ceph/$cluster\-$type.\$id.\$pid.\$cctid.asok
 " > "/etc/ceph/$cluster.conf"
 
 fi
